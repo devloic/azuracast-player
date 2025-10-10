@@ -261,7 +261,7 @@
 									<div class="push-bottom pad-bottom fx fx-slide-up fx-delay-3">
 										<div class="push-bottom">
 											<span class="text-secondary"
-												>Mixed by DJ {{ station.name | toText( 'N/A' ) }}.</span
+												>Mixed by DJ {{ $filters.toText(station.name, 'N/A') }}.</span
 											>
 											<br />
 											<span class="text-bright text-capitalize"
@@ -269,7 +269,7 @@
 											>
 											<span class="text-faded">Playlist:</span>&nbsp;
 											<span class="text-bright text-capitalize"
-												>{{ currentsong.playlist | toText( 'N/A' ) }}.</span
+												>{{ $filters.toText(currentsong.playlist, 'N/A') }}.</span
 											>
 											<br />
 											<span>{{ station.description }}</span>
@@ -329,7 +329,7 @@
 											:key="station.mounts[0].listeners.current "
 										>
 											<i class="ico ico-headphones"></i>&nbsp; {{
-											station.mounts[0].listeners.current | toCommas( 0 ) }}
+											$filters.toCommas(station.mounts[0].listeners.current, 0) }}
 											listening
 										</div>
 									</div>
@@ -341,19 +341,19 @@
 									>
 										<div>
 											<span class="text-secondary"
-												>{{ songNow.title | toText( 'N/A' ) }}</span
+												>{{ $filters.toText(songNow.title, 'N/A') }}</span
 											>
 										</div>
 										<div>
 											<span class="text-faded">From:</span>&nbsp;
 											<span class="text-bright"
-												>{{ songNow.album | toText( 'N/A' ) }}</span
+												>{{ $filters.toText(songNow.album, 'N/A') }}</span
 											>
 										</div>
 										<div>
 											<span class="text-faded">By:</span>&nbsp;
 											<span class="text-default"
-												>{{ songNow.artist | toText( 'N/A' ) }}</span
+												>{{ $filters.toText(songNow.artist, 'N/A') }}</span
 											>
 										</div>
 									</div>
@@ -387,7 +387,7 @@
 											<div class="pad-left">
 												<div>
 													<span class="text-secondary"
-														>{{ nextSong.title | toText( 'N/A' ) }}</span
+														>{{ $filters.toText(nextSong.title, 'N/A') }}</span
 													>
 												</div>
 												<div>
@@ -399,13 +399,13 @@
 												<div>
 													<span class="text-faded">From:</span>&nbsp;
 													<span class="text-bright"
-														>{{ nextSong.album | toText( 'N/A' ) }}</span
+														>{{ $filters.toText(nextSong.album, 'N/A') }}</span
 													>
 												</div>
 												<div>
 													<span class="text-faded">By:</span>&nbsp;
 													<span class="text-default"
-														>{{ nextSong.artist | toText( 'N/A' ) }}</span
+														>{{ $filters.toText(nextSong.artist, 'N/A') }}</span
 													>
 												</div>
 											</div>
@@ -445,19 +445,19 @@
 											<div class="pad-left">
 												<div>
 													<span class="text-secondary"
-														>{{ sh.song.title | toText( 'N/A' ) }}</span
+														>{{ $filters.toText(sh.song.title, 'N/A') }}</span
 													>
 												</div>
 												<div>
 													<span class="text-faded">From:</span>&nbsp;
 													<span class="text-bright"
-														>{{ sh.song.album | toText( 'N/A' ) }}</span
+														>{{ $filters.toText(sh.song.album, 'N/A') }}</span
 													>
 												</div>
 												<div>
 													<span class="text-faded">By:</span>&nbsp;
 													<span class="text-default"
-														>{{ sh.song.artist | toText( 'N/A' ) }}</span
+														>{{ $filters.toText(sh.song.artist, 'N/A') }}</span
 													>
 												</div>
 												<div>
@@ -616,7 +616,7 @@
 										<div class="text-nowrap">
 											<span class="text-secondary"
 												><i class="ico ico-headphones"></i>&nbsp; {{
-												c.mounts[0].listeners.current | toCommas( 0 ) }}
+												$filters.toCommas(c.mounts[0].listeners.current, 0) }}
 												&nbsp;</span
 											>
 											<fav-btn
@@ -628,7 +628,7 @@
 									</div>
 									<div class="text-small">
 										<span class="text-faded text-uppercase text-small"
-											>{{ c.genre | toText }}</span
+											>{{ $filters.toText(c.genre) }}</span
 										>
 										<br />
 										{{ c.description }}
@@ -705,7 +705,7 @@
                         defer
                 ></script>
                 <script
-                        src="//cdnjs.cloudflare.com/ajax/libs/vue/2.7.14/vue.min.js"
+                        src="//cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.js"
                         defer
                 ></script>
                 <script src="public/bundles/app.min.js" defer></script>

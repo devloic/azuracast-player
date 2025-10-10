@@ -2,8 +2,7 @@
  * Main app JS entry file.
  */
 import "./scss/app.scss";
-import "./js/filters";
-import "./js/favorite";
+import { createApp, nextTick } from 'vue';
 import _api from "./js/api";
 import _audio from "./js/audio";
 import _scene from "./js/scene";
@@ -11,12 +10,39 @@ import _utils from "./js/utils";
 import _store from "./js/store";
 import _config from "./js/config";
 
-// import jsonp from "jsonp";
+// Import filters
+const toCommas = (num, decimals) => {
+  let o = { style: 'decimal', minimumFractionDigits: decimals, maximumFractionDigits: decimals };
+  return new Intl.NumberFormat('en-US', o).format(num);
+};
+
+const toText = (str, def) => {
+  str = String(str || '').replace(/[^A-Za-zÀ-ÖØ-öø-ÿ\(\)\`\'\-\,\.\!\?]/g, ' ').replace(/\s\s+/g, ' ').trim();
+  return str || String(def || '');
+};
+
+// Favorite button component
+const FavBtn = {
+  props: {
+    id: { type: String, default: '', required: true },
+    text: { type: String, default: '', required: false },
+    active: { type: Boolean, default: false },
+  },
+  emits: ['change'],
+  template: `
+    <button class="hover-text focus-text" @click.stop="$emit('change', id, !active)" title="Toggle save favorite station">
+      <span>
+        <i v-if="active" class="ico ico-favs-check text-primary fx fx-drop-in" key="on"></i>
+        <i v-else class="ico ico-favs-add fx fx-drop-in" key="off"></i>
+      </span>
+      <span v-if="text">&nbsp; {{ text }}</span>
+    </button>`
+};
 
 // main vue app
-var vm = new Vue({
-  el: "#app",
-  data: {
+const app = createApp({
+  data() {
+    return {
     // toggles
     init: false,
     visible: true,
@@ -53,6 +79,7 @@ var vm = new Vue({
     anf: null,
     sto: null,
     itv: null,
+    };
   },
 
   // watch methods
@@ -662,16 +689,34 @@ var vm = new Vue({
     this.loadVolume();
     this.setupEvents();
     this.getChannels(true);
-    this.setupCanvas();
-    this.updateCanvas();
     this.setupMaintenance();
     this.updateHeight();
-    this.initPlayer();
+
+    // Wait for DOM to be fully ready for canvas operations
+    nextTick(() => {
+      setTimeout(() => {
+        this.setupCanvas();
+        this.updateCanvas();
+        this.initPlayer();
+      }, 100);
+    });
   },
 
   // on app destroyed
-  destroyed() {
+  unmounted() {
     this.closeAudio();
     this.clearTimers();
   },
 });
+
+// Register component
+app.component('fav-btn', FavBtn);
+
+// Register global properties (filters)
+app.config.globalProperties.$filters = {
+  toCommas,
+  toText
+};
+
+// Mount app
+app.mount("#app");

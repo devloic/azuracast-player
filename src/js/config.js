@@ -1,3 +1,3 @@
 export default {
-  apiBaseUrl: '',
+  apiBaseUrl: 'http://azuracast.local:81',
 }
