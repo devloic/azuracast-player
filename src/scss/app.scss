@@ -233,3 +233,24 @@
     }
   }
 }
+
+/**
+ * Recent Tracks column.
+ *
+ * The layout is a two-column flex-autorow with both children at flex: 1, which
+ * left the track list floating in the middle of the page over the visualiser.
+ * Pin it to the right edge at a readable fixed width and let the station details
+ * take the remaining space.
+ *
+ * Only above the medium breakpoint: below it, flex-autorow stacks to a single
+ * column and the list should stay full width.
+ */
+@media #{variables.$screenMedium} {
+  .flex-autorow > .flex-item.player-tracks-col {
+    flex: 0 0 auto;
+    width: 30rem;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: 0;
+  }
+}
