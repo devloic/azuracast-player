@@ -55,9 +55,10 @@
   }
   @media #{variables.$screenMedium} {
     margin: 0 (variables.$padSpace * 2);
-    max-width: 1400px;
+    // +10% on both axes (was 1400x700).
+    max-width: 1540px;
     height: calc(var(--height, 100vh) - (#{variables.$padSpace} * 4));
-    max-height: 700px;
+    max-height: 770px;
     border-radius: variables.$lineJoin;
     box-shadow: variables.$shadowContainer;
   }
@@ -251,6 +252,9 @@
     width: 30rem;
     max-width: 100%;
     margin-left: auto;
-    margin-right: 0;
+    // Cancel .player-content's padding on this side only, so the widest track
+    // card reaches the right edge of the player window instead of stopping an
+    // em short of it.
+    margin-right: -#{variables.$padSpace};
   }
 }
