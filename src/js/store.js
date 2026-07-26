@@ -16,7 +16,15 @@ export default {
   get(key) {
     if (!this._isStr(key)) return;
     const json = window.localStorage.getItem(key) || '{}';
-    const parsed = JSON.parse(json) || {};
+    // One malformed entry used to throw on every get() and leave the app broken
+    // until the user cleared site data. Drop the bad key and carry on.
+    let parsed = {};
+    try {
+      parsed = JSON.parse(json) || {};
+    } catch (e) {
+      this.delete(key);
+      return undefined;
+    }
     const { time, expire, data } = parsed;
     if (this._isExpired(time, expire)) this.delete(key);
     return data;

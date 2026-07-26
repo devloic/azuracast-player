@@ -5,7 +5,10 @@ export default {
 
   // get search results off a list for an obj key
   search(list, key, search) {
-    const regxp = new RegExp('^('+ search +')', 'i');
+    // Escape before compiling: a bare "(" threw SyntaxError and killed the filter,
+    // and nested quantifiers made it a ReDoS.
+    const escaped = String(search ?? '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regxp = new RegExp('^(' + escaped + ')', 'i');
     return list.filter(item => regxp.test(item[key]));
   },
 

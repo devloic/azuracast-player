@@ -74,7 +74,10 @@ export default {
         c.infourl = c.url;
         c.twitter = c.twitter ? 'https://twitter.com/@' + c.twitter : '';
         c.route = '/station/' + c.shortcode;
-        c.listeners = c.mounts[0].listeners.current | 0;
+        // A station with no mount yet (just created, or frontend still starting)
+        // used to throw here. The throw landed in getChannels()'s .catch, so the
+        // whole station list failed with a generic network-sounding error.
+        c.listeners = c.mounts?.[0]?.listeners?.current ?? 0;
         c.updated = c.updated | 0;
         c.favorite = false;
         c.active = false;

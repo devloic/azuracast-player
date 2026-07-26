@@ -102,9 +102,9 @@ export default {
   // stop playing audio
   stopAudio() {
     if (!this._audio) return;
+    // HTMLAudioElement has no stop()/close(); those calls were silently swallowed
+    // by their catch blocks and did nothing.
     try { this._audio.pause(); } catch (e) {}
-    try { this._audio.stop(); } catch (e) {}
-    try { this._audio.close(); } catch (e) {}
   },
 
   // play audio source url
@@ -117,10 +117,15 @@ export default {
         console.log('Audio context has been resumed.');
       });
     }
-    this._audio.src = String(source || '') + '?x=' + Date.now();
-    this._audio.preload = 'metadata';
+    // crossOrigin MUST be set before src. Set afterwards it does not affect the
+    // fetch, the media ends up tainted, and a tainted MediaElementSource makes the
+    // analyser return all zeros — which is what the "not working on some devices
+    // running safari" fallback in getFreqData() was compensating for.
+    // The stream sends Access-Control-Allow-Origin, so anonymous mode is accepted.
     this._audio.crossOrigin = 'anonymous';
+    this._audio.preload = 'metadata';
     this._audio.autoplay = false;
+    this._audio.src = String(source || '') + '?x=' + Date.now();
     this._audio.load();
   },
 
