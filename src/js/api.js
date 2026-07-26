@@ -8,8 +8,11 @@ import config from './config';
 export default {
   
   getAzuracastHostname(){
-    var hostname = config.apiBaseUrl != '' ? config.apiBaseUrl : "http://" + window.location.hostname;
-    return hostname;
+    // window.location.origin, not "http://" + hostname: hostname omits the port, so
+    // an install served on anything other than :80 produced unreachable API URLs
+    // (e.g. http://10.0.0.4/api/stations instead of http://10.0.0.4:8200/...).
+    // origin also preserves https.
+    return config.apiBaseUrl !== '' ? config.apiBaseUrl : window.location.origin;
   },
 
   // get station data from api
