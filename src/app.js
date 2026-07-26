@@ -623,7 +623,7 @@ const app = createApp({
 
     // waiting for media to load
     onWaiting(e) {
-      if (this.sto) clearInterval(this.sto);
+      if (this.sto) clearTimeout(this.sto); // sto is a timeout id, not an interval
       this.sto = setTimeout(() => this.onError(e), 10000);
       this.playing = false;
       this.loading = true;

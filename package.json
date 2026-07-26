@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "cross-env webpack serve --mode development --open",
     "dev:watch": "cross-env webpack --mode development --watch",
-    "build": "cross-env webpack --mode production --progress",
+    "build": "npm run sass-min && cross-env webpack --mode production --progress",
     "sass-min": "sass ./src/scss:./public/css --style compressed",
     "init": "live-server --open=.",
     "serve": "http-server . -p 8484 -a localhost"
@@ -29,6 +29,7 @@
     "cross-env": "^7.0.3",
     "css-loader": "^7.1.2",
     "css-minimizer-webpack-plugin": "^7.0.0",
+    "http-server": "^14.1.1",
     "ignore-loader": "^0.1.2",
     "jsonp": "^0.2.1",
     "mini-css-extract-plugin": "^2.9.2",
@@ -44,7 +45,6 @@
   },
   "dependencies": {
     "axios": "^1.12.2",
-    "http-server": "^14.1.1",
     "three": "^0.180.0",
     "vue": "^3.5.22"
   }

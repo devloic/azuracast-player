@@ -1,0 +1,40 @@
+{
+    "build": "npm install; npm run dev for webpack-dev-server, npm run build for production webpack bundle, npm run sass-min to compile SCSS; npm run serve to host on localhost:8484.",
+    "current_state": "On branch 'uade' with uncommitted changes across index.html, package*.json, app.js, api.js, audio.js, scene.js, sphere.js, app.scss, webpack.config.js, public bundles; new untracked src/effects/ shader experiments and src/js/icosahedron.js. Recent commits bumped Vue to 3.5.33 and fixed 404 on album art via nginx.",
+    "entrypoints": [
+        "index.html",
+        "src/app.js",
+        "webpack.config.js",
+        "public/bundles/app.min.js"
+    ],
+    "notes": [
+        "UADE-themed branch suggests work integrating Amiga module/UADE audio playback alongside AzuraCast streams",
+        "Large binary assets (thumb*.png ~900KB, favicon.svg 160KB) committed in repo root",
+        "Effects directory contains unzipped third-party shader demos plus their zips — likely staging for integration",
+        "webpack-obfuscator in devDeps indicates output JS is obfuscated in production",
+        "No test suite or linter configured"
+    ],
+    "purpose": "Single-page web audio player for AzuraCast streaming radio stations, featuring a Three.js-based music-reactive 3D visualization (sphere/icosahedron with audio-driven shaders) and a Vue 3 UI.",
+    "structure": [
+        "src/ — application source (app.js entry, js/ modules, scss/ styles, effects/ shader experiments)",
+        "src/js/ — api, audio, scene, sphere, icosahedron, light, store, filters, favorite, utils, config modules",
+        "src/scss/ — Sass stylesheets compiled to public/css",
+        "src/effects/ — bundled Three.js shader demos (music-reactive shader v3, water ripple with audio)",
+        "public/ — built/served assets (bundles, css, images)",
+        "azuracast/ — AzuraCast-related assets/config",
+        "root — index.html, webpack/babel/postcss configs, favicons, README"
+    ],
+    "technologies": [
+        "JavaScript (ES modules)",
+        "Vue 3.5",
+        "Three.js 0.180",
+        "Axios",
+        "SCSS",
+        "Webpack 5",
+        "Babel",
+        "PostCSS/Autoprefixer",
+        "Sass",
+        "webpack-obfuscator",
+        "http-server / live-server"
+    ]
+}

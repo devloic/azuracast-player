@@ -63,9 +63,6 @@ export default {
   // parse station list from api response
   _parseChannels(station) {
     let output = [];
-    var randomNumber = Math.floor(Math.random() * 5);
-    let fileName = ".png";
-    let extension = fileName.split("/").pop();
     if (Array.isArray(station)) {
       for (let c of station) {
         c.plsfile = c.playlist_pls_url;
@@ -81,7 +78,12 @@ export default {
         c.updated = c.updated | 0;
         c.favorite = false;
         c.active = false;
-        c.imgLogo = this.getAzuracastHostname() + '/static/uploads/' + c.shortcode + '/' + 'album_art.'  + randomNumber + extension;
+        // The stations API exposes no artwork field, so this used to guess
+        // /static/uploads/<shortcode>/album_art.<random 0-4>.png. That 404s for
+        // every station on every 30s poll and the <img @error> handler swapped in
+        // the generic image anyway — so point at it directly and skip the round
+        // trip. (extension/fileName here computed ".png" from a constant.)
+        c.imgLogo = this.getAzuracastHostname() + '/static/img/generic_song.jpg';
         output.push(c);
       }
     }

@@ -248,9 +248,13 @@
  */
 @media #{variables.$screenMedium} {
   .flex-autorow > .flex-item.player-tracks-col {
-    flex: 0 0 auto;
-    width: 30rem;
-    max-width: 100%;
+    // Shrink-to-fit rather than a fixed 30rem: at 30rem each card was mostly
+    // empty to the right of its text, and the block masked the visualiser behind
+    // it. width:auto lets the column size to its content, capped so a long track
+    // title cannot push it back across the shape.
+    flex: 0 1 auto;
+    width: auto;
+    max-width: 22rem;
     margin-left: auto;
     // Cancel .player-content's padding on this side only, so the widest track
     // card reaches the right edge of the player window instead of stopping an
