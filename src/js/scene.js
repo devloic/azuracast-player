@@ -15,7 +15,7 @@ export default {
   _box: null,
   _mouse: { x: 0, y: 0 },
   _objects: [],
-  _currentVisualizer: 'sphere', // 'sphere' or 'icosahedron'
+  _currentVisualizer: 'icosahedron', // 'sphere' or 'icosahedron'
   _sphereCameraPos: { x: 0, y: 0, z: 300 }, // Store sphere camera position
 
   // setup animation canvas

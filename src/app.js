@@ -76,7 +76,7 @@ const app = createApp({
     sortParam: "listeners",
     sortOrder: "desc",
     // visualizer stuff
-    currentVisualizer: "sphere", // 'sphere' or 'icosahedron'
+    currentVisualizer: "icosahedron", // 'sphere' or 'icosahedron'
     icoColors: {
       red: 0.48,
       green: 0.12,
