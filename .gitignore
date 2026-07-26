@@ -73,3 +73,11 @@ typings/
 # the old dev API host long after config.js was fixed.
 public/bundles/
 public/css/
+
+# IDE + tooling artifacts
+.idea/
+SUMMARY_claudeqt.json
+
+# Third-party shader demos are vendored unpacked (with their LICENSE.txt);
+# the redundant archives are deliberately not tracked.
+src/effects/*.zip
