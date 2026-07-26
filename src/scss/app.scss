@@ -262,3 +262,26 @@
     margin-right: -#{variables.$padSpace};
   }
 }
+
+/**
+ * Drag-to-rotate affordance on the visualiser.
+ *
+ * The grab cursor lives on .player-wrap, but the UI layer above it (buttons,
+ * cards, the track list) resets to the default so it does not look draggable —
+ * scene.js ignores drags starting there anyway.
+ *
+ * user-select is killed only while dragging, otherwise a drag across the page
+ * highlights every label it passes over.
+ */
+.player-wrap {
+  cursor: grab;
+
+  a, button, input, select, textarea, label, .card, .player-tracklist {
+    cursor: auto;
+  }
+
+  &.is-dragging {
+    cursor: grabbing;
+    user-select: none;
+  }
+}

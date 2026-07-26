@@ -14,6 +14,13 @@ export default {
   _camera: null,
   _box: null,
   _mouse: { x: 0, y: 0 },
+  // Drag-to-rotate. _dragDelta accumulates between frames and is applied as an
+  // ADDITIVE offset in updateObjects(), never as an absolute rotation: the sphere
+  // spins itself (rotation.y -= 0.003 every frame) and setting rotation outright
+  // would freeze that.
+  _drag: { active: false, x: 0, y: 0 },
+  _dragDelta: { x: 0, y: 0 },
+  _dragSpeed: 0.005,
   _objects: [],
   _currentVisualizer: 'icosahedron', // 'sphere' or 'icosahedron'
   _sphereCameraPos: { x: 0, y: 0, z: 300 }, // Store sphere camera position
@@ -43,6 +50,15 @@ export default {
     // setup events
     window.addEventListener('mousemove', this.updateMouse.bind(this));
     window.addEventListener('resize', this.updateSize.bind(this));
+
+    // Pointer events (mouse + touch + pen) on the wrapper rather than the canvas:
+    // .player-layout sits above the canvas at z-index 3, so the canvas never sees
+    // them. Drags starting on interactive UI are ignored so buttons, sliders and
+    // the track list keep working.
+    this._wrap.addEventListener('pointerdown', this.onDragStart.bind(this));
+    window.addEventListener('pointermove', this.onDragMove.bind(this));
+    window.addEventListener('pointerup', this.onDragEnd.bind(this));
+    window.addEventListener('pointercancel', this.onDragEnd.bind(this));
     this.updateMouse();
     this.updateSize();
   },
@@ -97,6 +113,33 @@ export default {
     this._createCurrentVisualizer();
   },
 
+  // start a drag, unless it began on something interactive
+  onDragStart(e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    if (e.target.closest('a, button, input, select, textarea, label, .card, .player-tracklist')) return;
+
+    this._drag.active = true;
+    this._drag.x = e.clientX;
+    this._drag.y = e.clientY;
+    this._wrap.classList.add('is-dragging');
+  },
+
+  // accumulate movement; applied on the next frame
+  onDragMove(e) {
+    if (!this._drag.active) return;
+
+    this._dragDelta.y += (e.clientX - this._drag.x) * this._dragSpeed;
+    this._dragDelta.x += (e.clientY - this._drag.y) * this._dragSpeed;
+    this._drag.x = e.clientX;
+    this._drag.y = e.clientY;
+  },
+
+  onDragEnd() {
+    if (!this._drag.active) return;
+    this._drag.active = false;
+    this._wrap.classList.remove('is-dragging');
+  },
+
   // update custom objects in 3d scene
   updateObjects(freq, avgFreq) {
     // Only update the current visualizer
@@ -105,6 +148,18 @@ export default {
     // Use average frequency for icosahedron (more responsive), normalized freq for sphere
     const freqValue = this._currentVisualizer === 'icosahedron' ? avgFreq : freq;
     visualizer.update(this._box, this._mouse, freqValue);
+
+    // Apply and consume the drag delta. Additive, so it layers on top of whatever
+    // the visualizer just did to its own rotation.
+    if (this._dragDelta.x || this._dragDelta.y) {
+      const obj = visualizer.mesh || visualizer.group;
+      if (obj) {
+        obj.rotation.x += this._dragDelta.x;
+        obj.rotation.y += this._dragDelta.y;
+      }
+      this._dragDelta.x = 0;
+      this._dragDelta.y = 0;
+    }
 
     // Render: use composer for icosahedron (with bloom), regular renderer for sphere
     if (this._currentVisualizer === 'icosahedron' && Icosahedron.composer) {
