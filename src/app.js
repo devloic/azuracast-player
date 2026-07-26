@@ -75,6 +75,43 @@ const app = createApp({
     searchText: "",
     sortParam: "listeners",
     sortOrder: "desc",
+    // visualizer stuff
+    currentVisualizer: "sphere", // 'sphere' or 'icosahedron'
+    icoColors: {
+      red: 0.48,
+      green: 0.12,
+      blue: 0.16
+    },
+    icoBloom: {
+      threshold: 0.19,
+      strength: 1.32,
+      radius: 0.18
+    },
+    icoSettings: {
+      wireframe: true
+    },
+    icoZoom: 7.0, // camera z position (closer = zoomed in, further = zoomed out)
+    icoSmooth: 30, // icosahedron subdivision level (0-50)
+    icoIntensity: 1.0, // spike intensity (0-5, lower = sphere, higher = hedgehog)
+    showIcoControls: true, // visibility of icosahedron controls panel
+    // preset system
+    presets: [
+      {
+        name: 'Default',
+        colors: { red: 0.48, green: 0.12, blue: 0.16 },
+        bloom: { threshold: 0.25, strength: 0.50, radius: 0.24 },
+        settings: { wireframe: true },
+        zoom: 11.0
+      },
+      {
+        name: 'Intense Glow',
+        colors: { red: 0.48, green: 0.12, blue: 0.16 },
+        bloom: { threshold: 0.19, strength: 1.32, radius: 0.18 },
+        settings: { wireframe: true },
+        zoom: 7.0
+      }
+    ],
+    selectedPreset: '',
     // timer stuff
     anf: null,
     sto: null,
@@ -370,7 +407,8 @@ const app = createApp({
       this.anf = requestAnimationFrame(this.updateCanvas);
       if (this.visible) {
         const freq = _audio.getFreqData(this.playing);
-        _scene.updateObjects(freq);
+        const avgFreq = _audio.getAverageFrequency();
+        _scene.updateObjects(freq, avgFreq);
       }
     },
 
@@ -679,6 +717,163 @@ const app = createApp({
       );
     },
 
+    // switch visualizer
+    switchVisualizer() {
+      this.currentVisualizer = this.currentVisualizer === 'sphere' ? 'icosahedron' : 'sphere';
+      _scene.switchVisualizer(this.currentVisualizer);
+    },
+
+    // toggle fullscreen mode
+    toggleFullscreen() {
+      const elem = document.getElementById('player-wrap');
+
+      if (!document.fullscreenElement) {
+        // Enter fullscreen
+        if (elem.requestFullscreen) {
+          elem.requestFullscreen();
+        } else if (elem.webkitRequestFullscreen) {
+          elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) {
+          elem.msRequestFullscreen();
+        }
+      } else {
+        // Exit fullscreen
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+          document.msExitFullscreen();
+        }
+      }
+    },
+
+    // update icosahedron colors
+    updateIcoColors() {
+      _scene.updateIcoColors(this.icoColors);
+    },
+
+    // update icosahedron bloom
+    updateIcoBloom() {
+      _scene.updateIcoBloom(this.icoBloom);
+    },
+
+    // update icosahedron settings (wireframe)
+    updateIcoSettings() {
+      _scene.updateIcoSettings(this.icoSettings);
+    },
+
+    // update icosahedron zoom
+    updateIcoZoom() {
+      _scene.updateIcoZoom(this.icoZoom);
+    },
+
+    // update icosahedron smooth level
+    updateIcoSmooth() {
+      _scene.updateIcoSmooth(this.icoSmooth);
+    },
+
+    // update icosahedron spike intensity
+    updateIcoIntensity() {
+      _scene.updateIcoIntensity(this.icoIntensity);
+    },
+
+    // save current settings as a new preset
+    savePreset() {
+      // Count user presets (exclude defaults)
+      const userPresetCount = this.presets.filter(p =>
+        p.name !== 'Default' && p.name !== 'Intense Glow'
+      ).length;
+
+      const presetName = `preset${userPresetCount + 1}`;
+      const preset = {
+        name: presetName,
+        colors: { ...this.icoColors },
+        bloom: { ...this.icoBloom },
+        settings: { ...this.icoSettings },
+        zoom: this.icoZoom
+      };
+      this.presets.push(preset);
+
+      // Only save user-created presets to localStorage
+      const userPresets = this.presets.filter(p =>
+        p.name !== 'Default' && p.name !== 'Intense Glow'
+      );
+      localStorage.setItem('icoPresets', JSON.stringify(userPresets));
+    },
+
+    // load selected preset
+    loadPreset() {
+      const preset = this.presets.find(p => p.name === this.selectedPreset);
+      if (preset) {
+        this.icoColors = { ...preset.colors };
+        this.icoBloom = { ...preset.bloom };
+        this.icoSettings = { ...preset.settings };
+        if (preset.zoom !== undefined) {
+          this.icoZoom = preset.zoom;
+        }
+        this.updateIcoColors();
+        this.updateIcoBloom();
+        this.updateIcoSettings();
+        this.updateIcoZoom();
+      }
+    },
+
+    // delete selected preset
+    deletePreset() {
+      // Prevent deleting default presets
+      if (this.selectedPreset === 'Default' || this.selectedPreset === 'Intense Glow') {
+        alert('Cannot delete default presets');
+        return;
+      }
+      this.presets = this.presets.filter(p => p.name !== this.selectedPreset);
+
+      // Only save user-created presets to localStorage
+      const userPresets = this.presets.filter(p =>
+        p.name !== 'Default' && p.name !== 'Intense Glow'
+      );
+      localStorage.setItem('icoPresets', JSON.stringify(userPresets));
+      this.selectedPreset = '';
+    },
+
+    // load presets from localStorage
+    loadPresets() {
+      // Start with default presets
+      const defaultPresets = [
+        {
+          name: 'Default',
+          colors: { red: 0.48, green: 0.12, blue: 0.16 },
+          bloom: { threshold: 0.25, strength: 0.50, radius: 0.24 },
+          settings: { wireframe: true },
+          zoom: 11.0
+        },
+        {
+          name: 'Intense Glow',
+          colors: { red: 0.48, green: 0.12, blue: 0.16 },
+          bloom: { threshold: 0.19, strength: 1.32, radius: 0.18 },
+          settings: { wireframe: true },
+          zoom: 7.0
+        }
+      ];
+
+      const stored = localStorage.getItem('icoPresets');
+      if (stored) {
+        try {
+          const userPresets = JSON.parse(stored);
+          // Filter out any user-saved presets with default names, then merge
+          const filteredUserPresets = userPresets.filter(p =>
+            p.name !== 'Default' && p.name !== 'Intense Glow'
+          );
+          this.presets = [...defaultPresets, ...filteredUserPresets];
+        } catch (e) {
+          console.warn('Failed to load presets:', e);
+          this.presets = defaultPresets;
+        }
+      } else {
+        this.presets = defaultPresets;
+      }
+    },
+
     // ...
   },
 
@@ -687,6 +882,7 @@ const app = createApp({
     this.loadSortOptions();
     this.loadFavorites();
     this.loadVolume();
+    this.loadPresets();
     this.setupEvents();
     this.getChannels(true);
     this.setupMaintenance();

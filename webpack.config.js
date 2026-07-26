@@ -10,7 +10,7 @@ const isProd = process.env.NODE_ENV === "production";
 
 // dev server and globals styles
 const serverHost = "0.0.0.0";
-const serverPort = 8080;
+const serverPort = 4321;
 const basePath = path.join(__dirname, "/");
 const appEntry = "./src/app.js";
 const bundleDir = "./public/bundles/";
@@ -116,20 +116,26 @@ module.exports = {
   devServer: {
     host: serverHost,
     port: serverPort,
-    contentBase: basePath,
-    clientLogLevel: "info",
-    hot: false,
+    static: {
+      directory: basePath,
+    },
+    hot: true,
     liveReload: true,
-    inline: true,
-    quiet: false,
-    noInfo: false,
-    compress: false,
+    compress: true,
+    open: true,
+    client: {
+      logging: 'info',
+      overlay: {
+        errors: true,
+        warnings: false,
+      },
+    },
   },
 
   performance: {
-    hints: "error",
-    maxEntrypointSize: 614400,
-    maxAssetSize: 614400,
+    hints: isProd ? "warning" : false,
+    maxEntrypointSize: 1000000,
+    maxAssetSize: 1000000,
   },
   mode: "development",
 };

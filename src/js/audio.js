@@ -74,6 +74,20 @@ export default {
     return this._counter;
   },
 
+  // get average frequency (0-255) for more responsive visualization
+  getAverageFrequency() {
+    if (!this._analyser) return 0;
+
+    this._analyser.getByteFrequencyData(this._freq);
+
+    // Calculate average of all frequency bins
+    let sum = 0;
+    for (let i = 0; i < this._freq.length; i++) {
+      sum += this._freq[i];
+    }
+    return sum / this._freq.length;
+  },
+
   // set audio volume
   setVolume(volume) {
     if (!this._gain) return;
@@ -108,6 +122,11 @@ export default {
     this._audio.crossOrigin = 'anonymous';
     this._audio.autoplay = false;
     this._audio.load();
+  },
+
+  // get analyser node for THREE.Audio integration
+  getAnalyser() {
+    return this._analyser;
   },
 
 }

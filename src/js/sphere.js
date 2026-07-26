@@ -1,6 +1,8 @@
 /**
  * ThreeJS scene sphere object
  */
+import * as THREE from 'three';
+
 export default {
   group: null,
   shapes: [],
@@ -13,7 +15,19 @@ export default {
     this.group   = new THREE.Object3D();
     let shape1   = new THREE.CircleGeometry(1, 10);
     let shape2   = new THREE.CircleGeometry(2, 20);
-    let points   = new THREE.SphereGeometry(100, 30, 14).vertices;
+
+    // Get vertices from geometry (Three.js r128+ uses attributes instead of vertices array)
+    let sphereGeo = new THREE.SphereGeometry(100, 30, 14);
+    let points = [];
+    const positions = sphereGeo.attributes.position;
+    for (let i = 0; i < positions.count; i++) {
+      points.push({
+        x: positions.getX(i),
+        y: positions.getY(i),
+        z: positions.getZ(i)
+      });
+    }
+
     let material = new THREE.MeshNormalMaterial({ transparent: true, opacity: 0, side: THREE.DoubleSide });
     let center   = new THREE.Vector3(0, 0, 0);
     let radius   = 12;
@@ -21,8 +35,8 @@ export default {
     for (let i = 0; i < points.length; i++) {
       let { x, y, z } = points[i];
       let home  = { x, y, z };
-      let cycle = THREE.Math.randInt(0, 100);
-      let pace  = THREE.Math.randInt(10, 30);
+      let cycle = THREE.MathUtils.randInt(0, 100);
+      let pace  = THREE.MathUtils.randInt(10, 30);
       let shape = new THREE.Mesh((i % 2) ? shape1 : shape2, material);
 
       shape.position.set(x, y, z);

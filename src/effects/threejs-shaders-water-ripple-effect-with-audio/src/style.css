@@ -1,0 +1,155 @@
+@font-face {
+  font-family: "GT Standard";
+  src: url("https://assets.codepen.io/7558/GT-Standard-VF-Trial.woff2")
+    format("woff2-variations");
+  font-weight: 300 900;
+  font-stretch: 0% 150%;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "PPSupplyMono";
+  src: url("https://assets.codepen.io/7558/PPSupplyMono-Regular.ttf")
+    format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  overflow: hidden;
+  background: #000;
+  font-family: "PPSupplyMono", monospace;
+  user-select: none;
+}
+
+#container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#controls {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 100;
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+}
+
+#controls:hover {
+  opacity: 1;
+}
+
+button {
+  background: none;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  text-transform: uppercase;
+  transition: opacity 0.2s ease;
+}
+
+button:hover {
+  opacity: 0.7;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+canvas {
+  display: block;
+}
+
+.tp-dfwv {
+  position: fixed !important;
+  top: 20px !important;
+  right: 20px !important;
+  z-index: 1000 !important;
+  display: none !important;
+  transition: opacity 0.3s ease !important;
+}
+
+.tp-dfwv.visible {
+  display: block !important;
+}
+
+.info {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  font-size: 12px;
+  text-transform: uppercase;
+  text-align: center;
+  z-index: 1000;
+  line-height: 1.4;
+  opacity: 0.8;
+}
+
+.info a {
+  color: white;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  transition: border-bottom-color 0.2s ease;
+}
+
+.info a:hover {
+  border-bottom-color: white;
+}
+
+.credit {
+  margin-top: 4px;
+  opacity: 0.6;
+  font-size: 11px;
+}
+
+.help-hint {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  color: white;
+  font-size: 11px;
+  text-transform: uppercase;
+  opacity: 0.5;
+  z-index: 1000;
+  transition: opacity 0.3s ease;
+}
+
+.help-hint.hidden {
+  opacity: 0;
+}
+
+@media (max-width: 768px) {
+  .info {
+    font-size: 10px;
+    bottom: 10px;
+  }
+
+  #controls {
+    top: 10px;
+    left: 10px;
+  }
+
+  .help-hint {
+    top: 10px;
+    right: 10px;
+    font-size: 10px;
+  }
+}

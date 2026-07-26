@@ -55,7 +55,7 @@
   }
   @media #{variables.$screenMedium} {
     margin: 0 (variables.$padSpace * 2);
-    max-width: 1080px;
+    max-width: 1400px;
     height: calc(var(--height, 100vh) - (#{variables.$padSpace} * 4));
     max-height: 700px;
     border-radius: variables.$lineJoin;

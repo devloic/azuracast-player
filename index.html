@@ -179,6 +179,108 @@
 					height="400"
 				></canvas>
 
+				<!-- Icosahedron controls panel (right side) -->
+				<!-- Toggle button for icosahedron controls -->
+				<button v-if="currentVisualizer === 'icosahedron'" @click="showIcoControls = !showIcoControls" style="position: absolute; right: 10px; top: 10px; background: rgba(0,0,0,0.85); color: white; border: 1px solid #555; border-radius: 3px; padding: 8px 12px; cursor: pointer; z-index: 11; font-size: 11px;">
+					{{ showIcoControls ? 'Hide Controls' : 'Show Controls' }}
+				</button>
+
+				<aside v-if="currentVisualizer === 'icosahedron' && showIcoControls" style="position: absolute; right: 0; top: 0; width: 320px; height: 100%; background: rgba(0,0,0,0.9); padding: 15px; overflow-y: auto; z-index: 10; box-sizing: border-box;">
+					<h3 style="color: white; font-size: 14px; margin: 0 0 15px 0; text-align: center; border-bottom: 2px solid #555; padding-bottom: 8px;">Controls</h3>
+
+					<!-- Color Controls -->
+					<div style="margin-bottom: 15px;">
+						<h4 style="color: #aaa; font-size: 12px; margin: 0 0 10px 0; border-bottom: 1px solid #555; padding-bottom: 5px;">Colors</h4>
+
+						<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+							<label style="color: #ff6666; font-size: 11px; width: 45px;">Red</label>
+							<input type="range" min="0" max="1" step="0.01" v-model.number="icoColors.red" @input="updateIcoColors()" style="flex: 1; height: 20px;" />
+							<input type="number" min="0" max="1" step="0.01" v-model.number="icoColors.red" @input="updateIcoColors()" style="width: 55px; padding: 4px; font-size: 11px; background: #333; color: white; border: 1px solid #555; border-radius: 2px;" />
+						</div>
+
+						<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+							<label style="color: #66ff66; font-size: 11px; width: 45px;">Green</label>
+							<input type="range" min="0" max="1" step="0.01" v-model.number="icoColors.green" @input="updateIcoColors()" style="flex: 1; height: 20px;" />
+							<input type="number" min="0" max="1" step="0.01" v-model.number="icoColors.green" @input="updateIcoColors()" style="width: 55px; padding: 4px; font-size: 11px; background: #333; color: white; border: 1px solid #555; border-radius: 2px;" />
+						</div>
+
+						<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+							<label style="color: #6666ff; font-size: 11px; width: 45px;">Blue</label>
+							<input type="range" min="0" max="1" step="0.01" v-model.number="icoColors.blue" @input="updateIcoColors()" style="flex: 1; height: 20px;" />
+							<input type="number" min="0" max="1" step="0.01" v-model.number="icoColors.blue" @input="updateIcoColors()" style="width: 55px; padding: 4px; font-size: 11px; background: #333; color: white; border: 1px solid #555; border-radius: 2px;" />
+						</div>
+					</div>
+
+					<!-- Bloom Controls -->
+					<div style="margin-bottom: 15px;">
+						<h4 style="color: #aaa; font-size: 12px; margin: 0 0 10px 0; border-bottom: 1px solid #555; padding-bottom: 5px;">Bloom</h4>
+
+						<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+							<label style="color: #ccc; font-size: 11px; width: 70px;">Threshold</label>
+							<input type="range" min="0" max="1" step="0.01" v-model.number="icoBloom.threshold" @input="updateIcoBloom()" style="flex: 1; height: 20px;" />
+							<input type="number" min="0" max="1" step="0.01" v-model.number="icoBloom.threshold" @input="updateIcoBloom()" style="width: 55px; padding: 4px; font-size: 11px; background: #333; color: white; border: 1px solid #555; border-radius: 2px;" />
+						</div>
+
+						<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+							<label style="color: #ccc; font-size: 11px; width: 70px;">Strength</label>
+							<input type="range" min="0" max="3" step="0.01" v-model.number="icoBloom.strength" @input="updateIcoBloom()" style="flex: 1; height: 20px;" />
+							<input type="number" min="0" max="3" step="0.01" v-model.number="icoBloom.strength" @input="updateIcoBloom()" style="width: 55px; padding: 4px; font-size: 11px; background: #333; color: white; border: 1px solid #555; border-radius: 2px;" />
+						</div>
+
+						<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+							<label style="color: #ccc; font-size: 11px; width: 70px;">Radius</label>
+							<input type="range" min="0" max="1" step="0.01" v-model.number="icoBloom.radius" @input="updateIcoBloom()" style="flex: 1; height: 20px;" />
+							<input type="number" min="0" max="1" step="0.01" v-model.number="icoBloom.radius" @input="updateIcoBloom()" style="width: 55px; padding: 4px; font-size: 11px; background: #333; color: white; border: 1px solid #555; border-radius: 2px;" />
+						</div>
+					</div>
+
+					<!-- Display Controls -->
+					<div style="margin-bottom: 15px;">
+						<h4 style="color: #aaa; font-size: 12px; margin: 0 0 10px 0; border-bottom: 1px solid #555; padding-bottom: 5px;">Display</h4>
+
+						<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+							<label style="color: #ccc; font-size: 11px; width: 70px;">Wireframe</label>
+							<input type="checkbox" v-model="icoSettings.wireframe" @change="updateIcoSettings()" style="width: 20px; height: 20px; cursor: pointer;" />
+						</div>
+
+						<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+							<label style="color: #ccc; font-size: 11px; width: 70px;">Zoom</label>
+							<input type="range" min="5" max="50" step="0.5" v-model.number="icoZoom" @input="updateIcoZoom()" style="flex: 1; height: 20px;" />
+							<input type="number" min="5" max="50" step="0.5" v-model.number="icoZoom" @input="updateIcoZoom()" style="width: 55px; padding: 4px; font-size: 11px; background: #333; color: white; border: 1px solid #555; border-radius: 2px;" />
+						</div>
+
+						<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+							<label style="color: #ccc; font-size: 11px; width: 70px;">Smooth</label>
+							<input type="range" min="0" max="50" step="1" v-model.number="icoSmooth" @input="updateIcoSmooth()" style="flex: 1; height: 20px;" />
+							<input type="number" min="0" max="50" step="1" v-model.number="icoSmooth" @input="updateIcoSmooth()" style="width: 55px; padding: 4px; font-size: 11px; background: #333; color: white; border: 1px solid #555; border-radius: 2px;" />
+						</div>
+
+						<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+							<label style="color: #ccc; font-size: 11px; width: 70px;">Intensity</label>
+							<input type="range" min="0" max="5" step="0.1" v-model.number="icoIntensity" @input="updateIcoIntensity()" style="flex: 1; height: 20px;" />
+							<input type="number" min="0" max="5" step="0.1" v-model.number="icoIntensity" @input="updateIcoIntensity()" style="width: 55px; padding: 4px; font-size: 11px; background: #333; color: white; border: 1px solid #555; border-radius: 2px;" />
+						</div>
+					</div>
+
+					<!-- Preset Controls -->
+					<div style="margin-bottom: 10px;">
+						<h4 style="color: #aaa; font-size: 12px; margin: 0 0 10px 0; border-bottom: 1px solid #555; padding-bottom: 5px;">Presets</h4>
+
+						<button @click="savePreset()" style="width: 100%; padding: 8px; background: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px; margin-bottom: 8px;">
+							Save Preset
+						</button>
+
+						<select v-model="selectedPreset" @change="loadPreset()" style="width: 100%; padding: 6px; font-size: 11px; margin-bottom: 8px; background: #333; color: white; border: 1px solid #555; border-radius: 3px;">
+							<option value="">-- Load Preset --</option>
+							<option v-for="preset in presets" :key="preset.name" :value="preset.name">{{ preset.name }}</option>
+						</select>
+
+						<button v-if="selectedPreset" @click="deletePreset()" style="width: 100%; padding: 6px; background: #f44336; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;">
+							Delete Preset
+						</button>
+					</div>
+				</aside>
+
 				<!-- main player layout -->
 				<section class="player-layout">
 					<!-- player top header -->
@@ -188,6 +290,16 @@
 							<a href="/" style="color: inherit; text-decoration: none">
 								<span style="cursor: pointer">AzuraCast - Player</span>
 							</a>
+							&nbsp;
+							<button
+								class="text-nowrap common-btn focus-text"
+								type="button"
+								@click="toggleFullscreen()"
+								title="Toggle Fullscreen"
+								style="font-size: 18px;"
+							>
+								⛶
+							</button>
 						</h2>
 						<button
 							class="text-nowrap common-btn focus-text"
@@ -557,6 +669,18 @@
 								>
 							</div>
 						</section>
+
+						<!-- visualizer controls -->
+						<section class="visualizer-controls" style="position: absolute; left: 50%; transform: translateX(-50%);">
+							<button
+								class="text-nowrap common-btn focus-text"
+								type="button"
+								@click="switchVisualizer()"
+								:title="currentVisualizer === 'sphere' ? 'Switch to Icosahedron' : 'Switch to Sphere'"
+							>
+								<i class="ico ico-waveform"></i> {{ currentVisualizer === 'sphere' ? 'Sphere' : 'Ico' }}
+							</button>
+						</section>
 					</footer>
 				</section>
 				<!-- layout wrapper -->
@@ -696,18 +820,6 @@
                 <link rel="stylesheet" href="public/bundles/app.min.css" />
 
                 <!-- app scripts -->
-                <script
-                        src="https://cdnjs.cloudflare.com/ajax/libs/three.js/96/three.min.js"
-                        defer
-                ></script>
-                <script
-                        src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.8/axios.min.js"
-                        defer
-                ></script>
-                <script
-                        src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.5.22/vue.global.prod.js"
-                        defer
-                ></script>
                 <script src="public/bundles/app.min.js" defer></script>
 	</body>
 </html>

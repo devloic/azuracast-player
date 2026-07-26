@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "SPA audio player for the streaming stations provided by AzuraCast.",
   "scripts": {
-    "dev": "cross-env webpack --mode development",
+    "dev": "cross-env webpack serve --mode development --open",
+    "dev:watch": "cross-env webpack --mode development --watch",
     "build": "cross-env webpack --mode production --progress",
     "sass-min": "sass ./src/scss:./public/css --style compressed",
     "init": "live-server --open=.",
@@ -35,14 +36,16 @@
     "sass": "^1.82.0",
     "sass-loader": "^16.0.4",
     "style-loader": "^4.0.0",
-    "terser-webpack-plugin": "^5.3.10",
-    "webpack": "^5.96.1",
-    "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^5.1.0",
-    "webpack-obfuscator": "^3.5.1"
+    "terser-webpack-plugin": "^5.3.14",
+    "webpack": "^5.102.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2",
+    "webpack-obfuscator": "^3.5.0"
   },
   "dependencies": {
+    "axios": "^1.12.2",
     "http-server": "^14.1.1",
+    "three": "^0.180.0",
     "vue": "^3.5.22"
   }
 }
