@@ -14,6 +14,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import Audio from './audio';
 
 export default {
   group: null,
@@ -53,6 +54,23 @@ export default {
   _smooth: 0,              // running average of level, for transient detection
   _kick: 0,                // decaying beat impulse
 
+  // road — a spectrogram laid flat along the floor of the tunnel. Each frame the
+  // current spectrum becomes a new row at the far end; older rows scroll toward
+  // the camera, so the surface is a rolling history of the music.
+  road: null,
+  roadCols: 48,            // samples across the width
+  roadRows: 110,           // rows of history along Z
+  roadWidth: 44,
+  roadHeight: 9,           // vertical scale of the peaks
+  roadDrop: 15,            // how far below centre the road sits
+  roadRowRate: 34,         // rows pushed per second
+  _roadHistory: null,      // Float32Array(roadRows * roadCols), newest at _roadHead
+  _roadHead: 0,
+  _roadAccum: 0,
+  _roadSpectrum: null,     // smoothed spectrum, so rows do not jitter
+  _roadLut: null,          // amplitude -> rgb lookup, see _renderRoad()
+  roadLutSteps: 48,
+
   create(box, scene, renderer, camera) {
     this.dispose();
 
@@ -72,6 +90,7 @@ export default {
       this.rings.push(ring);
     }
 
+    this._buildRoad();
     this.group.position.set(0, 0, 0);
     scene.add(this.group);
 
@@ -133,6 +152,130 @@ export default {
   },
 
   /**
+   * The road: a plane laid flat under the tunnel whose vertex heights are a
+   * scrolling spectrogram. Wireframe, vertex-coloured, additive — so it glows
+   * through the bloom pass like the rings do.
+   */
+  _buildRoad() {
+    const cols = this.roadCols;
+    const rows = this.roadRows;
+    const depth = this.ringCount * this.ringSpacing;
+
+    const geo = new THREE.PlaneGeometry(this.roadWidth, depth, cols - 1, rows - 1);
+    geo.rotateX(-Math.PI / 2);   // lie flat
+    geo.translate(0, -this.roadDrop, -depth / 2 + 20);
+
+    const count = geo.attributes.position.count;
+    geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(count * 3), 3));
+
+    const mat = new THREE.MeshBasicMaterial({
+      vertexColors: true,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.85,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+
+    this.road = new THREE.Mesh(geo, mat);
+    this.group.add(this.road);
+
+    this._roadHistory = new Float32Array(rows * cols);
+    this._roadSpectrum = new Float32Array(cols);
+    this._roadHead = 0;
+    this._roadAccum = 0;
+  },
+
+  /**
+   * Push one row of spectrum into the history ring buffer.
+   * Mirrored about the centre so the road reads as a symmetrical channel, and
+   * smoothed across neighbours plus tapered at the edges so it is rounded rather
+   * than a row of hard bars.
+   */
+  _pushRoadRow(level) {
+    const cols = this.roadCols;
+    const bins = Audio.getFrequencies();
+    const half = Math.ceil(cols / 2);
+
+    for (let i = 0; i < half; i++) {
+      let v = 0;
+      if (bins && bins.length) {
+        // Spread the usable part of the spectrum over half the width; the top
+        // bins are mostly empty on a 128-point FFT so they are skipped.
+        const b = Math.floor((i / half) * bins.length * 0.7);
+        v = (bins[b] || 0) / 255;
+      } else {
+        v = level;
+      }
+      // Temporal smoothing: rows ease toward the new value instead of snapping.
+      const target = Math.pow(v, 1.4);              // tame the noise floor
+      this._roadSpectrum[i] += (target - this._roadSpectrum[i]) * 0.45;
+    }
+
+    const row = this._roadHead * cols;
+    for (let i = 0; i < cols; i++) {
+      // mirror the right half back over the left
+      const src = (i < half) ? i : (cols - 1 - i);
+      // 3-tap blur across the width
+      const a = this._roadSpectrum[Math.max(0, src - 1)];
+      const b = this._roadSpectrum[src];
+      const c = this._roadSpectrum[Math.min(half - 1, src + 1)];
+      let v = (a + 2 * b + c) / 4;
+
+      // taper to zero at the road edges so it does not end in a cliff
+      const edge = Math.sin((i / (cols - 1)) * Math.PI);
+      this._roadHistory[row + i] = v * edge;
+    }
+  },
+
+  // write the history buffer into the mesh's vertices and colours
+  _renderRoad(level) {
+    if (!this.road) return;
+
+    const cols = this.roadCols;
+    const rows = this.roadRows;
+    const pos = this.road.geometry.attributes.position;
+    const col = this.road.geometry.attributes.color;
+
+    // Colour through a lookup table rather than setHSL per vertex: this runs for
+    // every vertex of a 48x110 grid on every frame, and HSL conversion there costs
+    // ~300k calls/sec. The table is built once and quantises amplitude instead.
+    if (!this._roadLut) {
+      const steps = this.roadLutSteps;
+      this._roadLut = new Float32Array(steps * 3);
+      const tmp = new THREE.Color();
+      for (let i = 0; i < steps; i++) {
+        const v = i / (steps - 1);
+        tmp.setHSL(this.hueBase + (1 - v) * this.hueSpan * 0.8, 1.0, 0.12 + 0.55 * v);
+        this._roadLut[i * 3] = tmp.r;
+        this._roadLut[i * 3 + 1] = tmp.g;
+        this._roadLut[i * 3 + 2] = tmp.b;
+      }
+    }
+    const lut = this._roadLut;
+    const maxStep = this.roadLutSteps - 1;
+
+    for (let r = 0; r < rows; r++) {
+      // row 0 of the mesh is the far end; walk back through history from the head
+      const h = (this._roadHead - r + rows * 2) % rows;
+      for (let i = 0; i < cols; i++) {
+        const v = this._roadHistory[h * cols + i];
+        const idx = r * cols + i;
+
+        pos.setY(idx, -this.roadDrop + v * this.roadHeight);
+
+        // Same neon band as the rings, brightness by amplitude.
+        const k = Math.min(maxStep, Math.max(0, Math.round(v * maxStep))) * 3;
+        col.setXYZ(idx, lut[k], lut[k + 1], lut[k + 2]);
+      }
+    }
+
+    pos.needsUpdate = true;
+    col.needsUpdate = true;
+    this.road.geometry.computeBoundingSphere();
+  },
+
+  /**
    * @param box   bounding box of the canvas
    * @param mouse { x, y } pointer position, used to steer the tunnel slightly
    * @param freq    0..1 audio level from scene.js
@@ -185,7 +328,20 @@ export default {
       ring.scale.set(scale, scale, 1);
     }
 
+    // Road: advance the spectrogram at a fixed row rate so its scroll speed is
+    // independent of frame rate, and only while something is playing.
+    if (playing) {
+      this._roadAccum += dt * this.roadRowRate;
+      while (this._roadAccum >= 1) {
+        this._roadAccum -= 1;
+        this._roadHead = (this._roadHead + 1) % this.roadRows;
+        this._pushRoadRow(level);
+      }
+    }
+    this._renderRoad(level);
+
     // Slow roll, plus a gentle lean toward the pointer so it feels alive.
+    // The road rolls with the tunnel because it is a child of the same group.
     if (playing) this.group.rotation.z += this.twist * dt;
 
     if (mouse && box && box.width && box.height) {
@@ -208,6 +364,15 @@ export default {
       }
     }
     this.rings = [];
+
+    if (this.road) {
+      this.road.geometry.dispose();
+      this.road.material.dispose();
+      this.road = null;
+    }
+    this._roadHistory = null;
+    this._roadSpectrum = null;
+    this._roadLut = null;
 
     if (this.group && this.scene) {
       this.scene.remove(this.group);

@@ -22,7 +22,10 @@ export default {
     this._analyser = this._context.createAnalyser();
     this._gain     = this._context.createGain();
 
-    this._analyser.fftSize = 32;
+    // 128 -> 64 bins. The old 32 (16 bins) is far too coarse for the tunnel's
+    // spectrogram road. getFreqData() picks its bin proportionally below, so the
+    // sphere and icosahedron keep reacting to the same part of the spectrum.
+    this._analyser.fftSize = 128;
     this._source.connect(this._analyser);
     this._source.connect(this._gain);
     this._gain.connect(this._context.destination);
@@ -57,7 +60,9 @@ export default {
 
     // this is not working on some devices running safari
     this._analyser.getByteFrequencyData(this._freq);
-    let _freq = Math.floor(this._freq[4] | 0) / 255;
+    // Was a hardcoded bin 4 of 16. Proportional so it survives fftSize changes.
+    const _bin = Math.max(1, Math.floor(this._freq.length * 0.25));
+    let _freq = Math.floor(this._freq[_bin] | 0) / 255;
 
     // indicate that a freq value can be read
     if (!this._hasfreq && _freq) { this._hasfreq = true; }
@@ -127,6 +132,13 @@ export default {
     this._audio.autoplay = false;
     this._audio.src = String(source || '') + '?x=' + Date.now();
     this._audio.load();
+  },
+
+  // raw frequency bins (0-255), for the tunnel's spectrogram road
+  getFrequencies() {
+    if (!this._analyser) return null;
+    this._analyser.getByteFrequencyData(this._freq);
+    return this._freq;
   },
 
   // get analyser node for THREE.Audio integration
