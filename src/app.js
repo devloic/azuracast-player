@@ -415,7 +415,7 @@ const app = createApp({
       if (this.visible) {
         const freq = _audio.getFreqData(this.playing);
         const avgFreq = _audio.getAverageFrequency();
-        _scene.updateObjects(freq, avgFreq);
+        _scene.updateObjects(freq, avgFreq, this.playing);
       }
     },
 

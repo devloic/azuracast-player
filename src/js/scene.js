@@ -191,14 +191,14 @@ export default {
   },
 
   // update custom objects in 3d scene
-  updateObjects(freq, avgFreq) {
+  updateObjects(freq, avgFreq, playing) {
     // Only update the current visualizer
     const visualizer = this.current();
 
     // Icosahedron wants the raw 0-255 average (more responsive); sphere and tunnel
     // take the normalised 0-1 value.
     const freqValue = this._currentVisualizer === 'icosahedron' ? avgFreq : freq;
-    visualizer.update(this._box, this._mouse, freqValue);
+    visualizer.update(this._box, this._mouse, freqValue, playing);
 
     // Apply and consume the drag delta. Additive, so it layers on top of whatever
     // the visualizer just did to its own rotation.

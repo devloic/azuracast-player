@@ -33,13 +33,25 @@ export default {
   gapChance: 0.35,         // fraction of a ring left dark, so it reads as segments
 
   // motion
-  baseSpeed: 26,           // units/sec with no audio
+  baseSpeed: 26,           // units/sec while playing, before audio adds to it
   audioSpeed: 90,          // extra units/sec at full frequency
   twist: 0.25,             // radians/sec the whole tunnel rolls
 
-  // colour
-  hueSpread: 0.85,         // how much of the colour wheel one tunnel length covers
-  hueDrift: 0.05,          // hue cycles/sec
+  // colour — a neon palette rather than a full rainbow. The full wheel put muddy
+  // greens and yellows in the tunnel; keeping it inside cyan -> blue -> violet ->
+  // magenta -> pink is what reads as "light tunnel".
+  hueBase: 0.52,           // cyan
+  hueSpan: 0.45,           // ...through to pink (0.97)
+  hueDrift: 0.03,          // hue cycles/sec
+
+  // bounce — rings pulse with the music, and the pulse travels down the tunnel
+  // rather than every ring breathing in unison.
+  bounceAmp: 0.16,         // steady-state wobble scaled by level
+  kickAmp: 0.30,           // extra kick on a transient
+  wavePhase: 0.06,         // radians per unit of z — spacing of the travelling wave
+  waveSpeed: 4.0,          // radians/sec the wave moves
+  _smooth: 0,              // running average of level, for transient detection
+  _kick: 0,                // decaying beat impulse
 
   create(box, scene, renderer, camera) {
     this.dispose();
@@ -107,7 +119,7 @@ export default {
     geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
 
     const mat = new THREE.LineBasicMaterial({
-      color: new THREE.Color().setHSL(t * this.hueSpread, 1.0, 0.55),
+      color: new THREE.Color().setHSL(this.hueBase + t * this.hueSpan, 1.0, 0.6),
       transparent: true,
       opacity: 0.9,
       blending: THREE.AdditiveBlending,
@@ -116,28 +128,40 @@ export default {
 
     const line = new THREE.LineSegments(geo, mat);
     line.userData.radius = radius;
-    line.userData.hue = t * this.hueSpread;
+    line.userData.hue = t * this.hueSpan;
     return line;
   },
 
   /**
    * @param box   bounding box of the canvas
    * @param mouse { x, y } pointer position, used to steer the tunnel slightly
-   * @param freq  0..1 audio level from scene.js
+   * @param freq    0..1 audio level from scene.js
+   * @param playing  when false the tunnel is frozen — no travel, no roll, no bounce
    */
-  update(box, mouse, freq) {
+  update(box, mouse, freq, playing) {
     if (!this.group || !this.clock) return;
 
     const dt = Math.min(this.clock.getDelta(), 0.1); // clamp after a tab switch
     const elapsed = this.clock.getElapsedTime();
-    const level = Math.max(0, Math.min(1, freq || 0));
 
-    const speed = this.baseSpeed + this.audioSpeed * level;
+    // Nothing plays, nothing moves. getFreqData() decays its fallback counter
+    // toward zero when paused, but that still crept the tunnel forward, so the
+    // level is forced to zero rather than trusted.
+    const level = playing ? Math.max(0, Math.min(1, freq || 0)) : 0;
+
+    // Transient detection: compare the level against its own running average and
+    // convert the overshoot into a kick that decays fast. This is what makes the
+    // rings snap on a beat instead of swelling smoothly.
+    this._smooth += (level - this._smooth) * 0.08;
+    const transient = Math.max(0, level - this._smooth - 0.03);
+    this._kick = Math.max(this._kick * Math.pow(0.0015, dt), transient * 5);
+
+    const speed = playing ? (this.baseSpeed + this.audioSpeed * level) : 0;
     const depth = this.ringCount * this.ringSpacing;
     const recycleAt = (this.camera ? this.camera.position.z : 30) + this.ringSpacing;
 
     for (const ring of this.rings) {
-      ring.position.z += speed * dt;
+      if (speed) ring.position.z += speed * dt;
 
       // Past the camera: send it to the far end with a new look.
       if (ring.position.z > recycleAt) {
@@ -149,17 +173,20 @@ export default {
       const dist = recycleAt - ring.position.z;
       ring.material.opacity = 0.15 + 0.75 * (1 - Math.min(1, dist / depth));
 
-      // Hue cycles along the tunnel and drifts over time.
-      const hue = (ring.userData.hue + elapsed * this.hueDrift) % 1;
-      ring.material.color.setHSL(hue, 1.0, 0.45 + 0.25 * level);
+      // Hue stays inside the neon band as it drifts.
+      const hue = this.hueBase + ((ring.userData.hue + elapsed * this.hueDrift) % this.hueSpan);
+      ring.material.color.setHSL(hue, 1.0, 0.5 + 0.22 * level);
 
-      // Audio pushes the walls outward a little.
-      const scale = 1 + 0.18 * level;
+      // Bounce. The phase comes from the ring's own z, so the pulse travels along
+      // the tunnel instead of every ring scaling together.
+      const phase = ring.position.z * this.wavePhase + elapsed * this.waveSpeed;
+      const amount = this.bounceAmp * level + this.kickAmp * this._kick;
+      const scale = 1 + amount * Math.sin(phase);
       ring.scale.set(scale, scale, 1);
     }
 
     // Slow roll, plus a gentle lean toward the pointer so it feels alive.
-    this.group.rotation.z += this.twist * dt;
+    if (playing) this.group.rotation.z += this.twist * dt;
 
     if (mouse && box && box.width && box.height) {
       const tx = (mouse.x / box.width - 0.5) * 0.25;
