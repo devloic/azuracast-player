@@ -42,12 +42,13 @@ export default {
   // The frequencies are whole cycles per tunnel depth on purpose. Rings recycle by
   // subtracting exactly one depth, so anything else would make the curve jump at
   // the moment a ring wraps.
-  curveAmpX: 11,
-  curveAmpY: 7,
+  curveAmpX: 26,
+  curveAmpY: 16,
   curveFreqX: 1,           // whole cycles over one tunnel length
   curveFreqY: 2,
   curveDrift: 0.12,        // radians/sec, so the bends evolve instead of sitting still
-  lookAhead: 90,           // how far down the tunnel the camera aims
+  lookAhead: 320,          // aims most of the way down the tunnel, not just ahead of the nose
+  _travel: 0,              // distance flown; see the note on _curveAt()
 
   // motion
   baseSpeed: 26,           // units/sec while playing, before audio adds to it
@@ -176,7 +177,24 @@ export default {
     return line;
   },
 
-  // lateral offset of the tunnel centre at a given depth
+  /**
+   * Lateral offset of the tunnel centre at a given depth.
+   *
+   * Callers pass `z - _travel`, not raw z. The illusion is that the world moves
+   * toward a stationary camera, so a feature of the tunnel that started at world
+   * Z appears at z = Z + travel; reading the curve at z - travel converts back to
+   * world space.
+   *
+   * That is what makes it feel like following the tunnel rather than sitting in
+   * it. A ring's own z grows at exactly the travel rate, so z - travel is constant
+   * for that ring: each ring keeps a fixed lateral offset, like a real section of
+   * tube, while the camera at a fixed z sweeps through different parts of the
+   * curve over time. Sampling raw z did the opposite — rings slid sideways as they
+   * approached and the bend by the camera never changed.
+   *
+   * Recycling stays seamless: z jumps by exactly one depth, and the frequencies
+   * are whole cycles per depth.
+   */
   _curveAt(z, elapsed) {
     const k = (Math.PI * 2) / (this.ringCount * this.ringSpacing);
     return {
@@ -218,6 +236,7 @@ export default {
     this._roadSpectrum = new Float32Array(cols);
     this._roadHead = 0;
     this._roadAccum = 0;
+    this._travel = 0;
   },
 
   /**
@@ -298,7 +317,7 @@ export default {
       // The road's geometry is fixed in z, so the curve is sampled per row and
       // applied to the vertices. Computed once per row, not per vertex.
       const z = -depth + 20 + (r / (rows - 1)) * depth;
-      const bend = this._curveAt(z, this._elapsed);
+      const bend = this._curveAt(z - this._travel, this._elapsed);
 
       for (let i = 0; i < cols; i++) {
         const v = this._roadHistory[h * cols + i];
@@ -345,6 +364,10 @@ export default {
     this._kick = Math.max(this._kick * Math.pow(0.0015, dt), transient * 5);
 
     const speed = playing ? (this.baseSpeed + this.audioSpeed * level) : 0;
+    // Wrapped at one tunnel depth. The curve is periodic over that distance, so
+    // wrapping changes nothing visually but stops _travel growing without bound
+    // and losing float precision over a long session.
+    this._travel = (this._travel + speed * dt) % (this.ringCount * this.ringSpacing);
     const depth = this.ringCount * this.ringSpacing;
     const recycleAt = (this.camera ? this.camera.position.z : 30) + this.ringSpacing;
 
@@ -358,7 +381,7 @@ export default {
       }
 
       // Follow the curve at this ring's depth.
-      const bend = this._curveAt(ring.position.z, elapsed);
+      const bend = this._curveAt(ring.position.z - this._travel, elapsed);
       ring.position.x = bend.x;
       ring.position.y = bend.y;
 
@@ -389,8 +412,8 @@ export default {
     // position is applied, so an unrotated offset would drift off-axis as it spun.
     if (this.camera) {
       const camZ = this.camera.position.z;
-      const here = this._curveAt(camZ, elapsed);
-      const ahead = this._curveAt(camZ - this.lookAhead, elapsed);
+      const here = this._curveAt(camZ - this._travel, elapsed);
+      const ahead = this._curveAt(camZ - this.lookAhead - this._travel, elapsed);
 
       if (!this._vecA) { this._vecA = new THREE.Vector3(); this._vecB = new THREE.Vector3(); }
 
