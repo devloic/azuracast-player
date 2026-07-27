@@ -47,6 +47,7 @@ export default {
   curveFreqX: 1,           // whole cycles over one tunnel length
   curveFreqY: 2,
   curveDrift: 0.12,        // radians/sec, so the bends evolve instead of sitting still
+  lookAhead: 90,           // how far down the tunnel the camera aims
 
   // motion
   baseSpeed: 26,           // units/sec while playing, before audio adds to it
@@ -88,6 +89,8 @@ export default {
   // tunnel slowly bending and shifting colour on a stopped player.
   _animTime: 0,
   _elapsed: 0,             // shared with _renderRoad so the road curves in step
+  _vecA: null,             // scratch vectors, reused every frame rather than
+  _vecB: null,             // allocating two Vector3 per frame at 60fps
   _roadLut: null,          // amplitude -> rgb lookup, see _renderRoad()
   roadLutSteps: 48,
 
@@ -117,6 +120,8 @@ export default {
     // Camera looks straight down the tunnel. scene.js's wheel zoom moves this on
     // Z, which reads as travelling further in or out — no clamping needed here.
     if (camera) {
+      // x/y stay at zero: update() keeps the camera centred by moving the tunnel,
+      // not the camera. z is left for scene.js's wheel zoom.
       camera.position.set(0, 0, 30);
       camera.lookAt(0, 0, -depth * 0.5);
     }
@@ -373,6 +378,38 @@ export default {
       ring.scale.set(scale, scale, 1);
     }
 
+    // Keep the camera inside the tunnel.
+    //
+    // The camera stays put and the tunnel is counter-translated instead, so that
+    // the centre-line at the camera's depth lands on the camera. Moving the camera
+    // itself would fight scene.js, which owns camera.position.z for wheel zoom.
+    //
+    // The offset is rotated by the group's own orientation first: the group rolls
+    // (twist, and drag), and a rotation happens about the group's origin before its
+    // position is applied, so an unrotated offset would drift off-axis as it spun.
+    if (this.camera) {
+      const camZ = this.camera.position.z;
+      const here = this._curveAt(camZ, elapsed);
+      const ahead = this._curveAt(camZ - this.lookAhead, elapsed);
+
+      if (!this._vecA) { this._vecA = new THREE.Vector3(); this._vecB = new THREE.Vector3(); }
+
+      const offset = this._vecA.set(here.x, here.y, 0)
+        .applyQuaternion(this.group.quaternion);
+      this.group.position.x = -offset.x;
+      this.group.position.y = -offset.y;
+
+      // Aim along the tunnel rather than straight down -Z, so a bend reads as the
+      // path curving away instead of the wall sliding across the view.
+      const dir = this._vecB.set(ahead.x - here.x, ahead.y - here.y, -this.lookAhead)
+        .applyQuaternion(this.group.quaternion);
+      this.camera.lookAt(
+        this.camera.position.x + dir.x,
+        this.camera.position.y + dir.y,
+        this.camera.position.z + dir.z
+      );
+    }
+
     // Road: advance the spectrogram at a fixed row rate so its scroll speed is
     // independent of frame rate, and only while something is playing.
     if (playing) {
@@ -419,6 +456,8 @@ export default {
     this._roadHistory = null;
     this._roadSpectrum = null;
     this._roadLut = null;
+    this._vecA = null;
+    this._vecB = null;
 
     if (this.group && this.scene) {
       this.scene.remove(this.group);
