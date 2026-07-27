@@ -21,6 +21,15 @@ export default {
   _drag: { active: false, x: 0, y: 0 },
   _dragDelta: { x: 0, y: 0 },
   _dragSpeed: 0.005,
+  // Wheel zoom. The two visualisers live at very different camera distances —
+  // the icosahedron slider runs 5..50 (default 7), the sphere sits at 300 — so
+  // the clamp is per-shape and the step is multiplicative, which feels the same
+  // at both scales.
+  _zoomStep: 1.1,
+  _zoomRanges: {
+    icosahedron: { min: 5, max: 50 },
+    sphere: { min: 80, max: 900 },
+  },
   _objects: [],
   _currentVisualizer: 'icosahedron', // 'sphere' or 'icosahedron'
   _sphereCameraPos: { x: 0, y: 0, z: 300 }, // Store sphere camera position
@@ -56,6 +65,8 @@ export default {
     // them. Drags starting on interactive UI are ignored so buttons, sliders and
     // the track list keep working.
     this._wrap.addEventListener('pointerdown', this.onDragStart.bind(this));
+    // passive:false so preventDefault() can stop the page scrolling while zooming.
+    this._wrap.addEventListener('wheel', this.onWheel.bind(this), { passive: false });
     window.addEventListener('pointermove', this.onDragMove.bind(this));
     window.addEventListener('pointerup', this.onDragEnd.bind(this));
     window.addEventListener('pointercancel', this.onDragEnd.bind(this));
@@ -111,6 +122,32 @@ export default {
     }
 
     this._createCurrentVisualizer();
+  },
+
+  // zoom with the wheel, unless the pointer is over scrollable/interactive UI
+  onWheel(e) {
+    // .player-content is the scroll container, so let the track list scroll
+    // normally and only zoom over the open background.
+    if (e.target.closest('a, button, input, select, textarea, label, .card, .player-tracklist')) return;
+    if (!this._camera) return;
+
+    e.preventDefault();
+
+    const range = this._zoomRanges[this._currentVisualizer] || this._zoomRanges.sphere;
+    const factor = (e.deltaY > 0) ? this._zoomStep : (1 / this._zoomStep);
+    const z = Math.min(range.max, Math.max(range.min, this._camera.position.z * factor));
+
+    this._camera.position.z = z;
+
+    // Keep the saved sphere position in step, or switching away and back would
+    // discard the zoom.
+    if (this._currentVisualizer === 'sphere') this._sphereCameraPos.z = z;
+
+    // Let the UI mirror it, so the icosahedron zoom slider does not jump the
+    // next time it is touched.
+    window.dispatchEvent(new CustomEvent('visualizer-zoom', {
+      detail: { visualizer: this._currentVisualizer, zoom: z },
+    }));
   },
 
   // start a drag, unless it began on something interactive

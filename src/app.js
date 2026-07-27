@@ -879,6 +879,15 @@ const app = createApp({
 
   // on app mounted
   mounted() {
+    // Mirror wheel-zoom back into the slider, otherwise the next touch of the
+    // control snaps the camera back to whatever the slider still held.
+    this._onVisualizerZoom = (e) => {
+      if (e.detail && e.detail.visualizer === 'icosahedron') {
+        this.icoZoom = Math.round(e.detail.zoom * 2) / 2; // slider step is 0.5
+      }
+    };
+    window.addEventListener('visualizer-zoom', this._onVisualizerZoom);
+
     this.loadSortOptions();
     this.loadFavorites();
     this.loadVolume();
@@ -900,6 +909,9 @@ const app = createApp({
 
   // on app destroyed
   unmounted() {
+    if (this._onVisualizerZoom) {
+      window.removeEventListener('visualizer-zoom', this._onVisualizerZoom);
+    }
     this.closeAudio();
     this.clearTimers();
   },
