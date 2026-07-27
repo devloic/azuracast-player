@@ -138,6 +138,13 @@ const app = createApp({
 
   // computed methods
   computed: {
+    // Label for the visualizer toggle. Was an inline sphere/ico ternary in the
+    // template, which showed "Ico" while the tunnel was running once a third
+    // shape existed.
+    visualizerLabel() {
+      return { sphere: 'Sphere', icosahedron: 'Ico', tunnel: 'Tunnel' }[this.currentVisualizer] || 'Shape';
+    },
+
     // filter stations list
     channelsList() {
       let list = this.stations.slice();
@@ -717,10 +724,12 @@ const app = createApp({
       );
     },
 
-    // switch visualizer
+    // switch visualizer (cycles through the registered shapes)
     switchVisualizer() {
-      this.currentVisualizer = this.currentVisualizer === 'sphere' ? 'icosahedron' : 'sphere';
-      _scene.switchVisualizer(this.currentVisualizer);
+      const order = ['icosahedron', 'tunnel', 'sphere'];
+      const next = order[(order.indexOf(this.currentVisualizer) + 1) % order.length];
+      this.currentVisualizer = next;
+      _scene.switchVisualizer(next);
     },
 
     // toggle fullscreen mode

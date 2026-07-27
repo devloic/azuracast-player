@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import Sphere from './sphere';
 import Icosahedron from './icosahedron';
+import Tunnel from './tunnel';
 import Audio from './audio';
 
 export default {
@@ -29,7 +30,13 @@ export default {
   _zoomRanges: {
     icosahedron: { min: 5, max: 50 },
     sphere: { min: 80, max: 900 },
+    tunnel: { min: 10, max: 220 },
   },
+  // Single registry, so a new shape is one entry here instead of editing every
+  // `=== 'sphere' ? Sphere : Icosahedron` ternary.
+  _visualizers: { sphere: Sphere, icosahedron: Icosahedron, tunnel: Tunnel },
+  // These build their own EffectComposer and need the renderer + camera.
+  _needsRenderer: ['icosahedron', 'tunnel'],
   _objects: [],
   _currentVisualizer: 'icosahedron', // 'sphere' or 'icosahedron'
   _sphereCameraPos: { x: 0, y: 0, z: 300 }, // Store sphere camera position
@@ -74,10 +81,15 @@ export default {
     this.updateSize();
   },
 
+  // the active visualizer object
+  current() {
+    return this._visualizers[this._currentVisualizer] || Sphere;
+  },
+
   // create the currently selected visualizer
   _createCurrentVisualizer() {
-    const visualizer = this._currentVisualizer === 'sphere' ? Sphere : Icosahedron;
-    if (this._currentVisualizer === 'icosahedron') {
+    const visualizer = this.current();
+    if (this._needsRenderer.includes(this._currentVisualizer)) {
       visualizer.create(this._box, this._scene, this._renderer, this._camera);
 
       // Connect Web Audio API analyser to icosahedron (THREE.AudioAnalyser-like)
@@ -102,7 +114,8 @@ export default {
     }
 
     // Remove old visualizer objects from scene
-    const oldVisualizer = this._currentVisualizer === 'sphere' ? Sphere : Icosahedron;
+    const oldVisualizer = this.current();
+    if (typeof oldVisualizer.dispose === 'function') oldVisualizer.dispose();
     if (oldVisualizer.group) {
       this._scene.remove(oldVisualizer.group);
       oldVisualizer.group = null;
@@ -180,9 +193,10 @@ export default {
   // update custom objects in 3d scene
   updateObjects(freq, avgFreq) {
     // Only update the current visualizer
-    const visualizer = this._currentVisualizer === 'sphere' ? Sphere : Icosahedron;
+    const visualizer = this.current();
 
-    // Use average frequency for icosahedron (more responsive), normalized freq for sphere
+    // Icosahedron wants the raw 0-255 average (more responsive); sphere and tunnel
+    // take the normalised 0-1 value.
     const freqValue = this._currentVisualizer === 'icosahedron' ? avgFreq : freq;
     visualizer.update(this._box, this._mouse, freqValue);
 
@@ -198,9 +212,10 @@ export default {
       this._dragDelta.y = 0;
     }
 
-    // Render: use composer for icosahedron (with bloom), regular renderer for sphere
-    if (this._currentVisualizer === 'icosahedron' && Icosahedron.composer) {
-      Icosahedron.composer.render();
+    // Render through the visualizer's own composer when it has one (bloom), else
+    // straight through the renderer.
+    if (visualizer.composer) {
+      visualizer.composer.render();
     } else {
       this._renderer.render(this._scene, this._camera);
     }

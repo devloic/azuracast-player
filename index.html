@@ -671,9 +671,9 @@
 								class="text-nowrap common-btn focus-text"
 								type="button"
 								@click="switchVisualizer()"
-								:title="currentVisualizer === 'sphere' ? 'Switch to Icosahedron' : 'Switch to Sphere'"
+								:title="'Visualiser: ' + visualizerLabel + ' — click to cycle'"
 							>
-								<i class="ico ico-waveform"></i> {{ currentVisualizer === 'sphere' ? 'Sphere' : 'Ico' }}
+								<i class="ico ico-waveform"></i> {{ visualizerLabel }}
 							</button>
 						</section>
 					</footer>
