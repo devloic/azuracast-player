@@ -45,14 +45,18 @@ export default {
       this.group.add(shape);
     }
     this.touch = (('ontouchstart' in window) || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0);
-    this.group.position.set(40, 5, 0);
+    // Left of centre: the Recent Tracks column is pinned to the right edge, and
+    // at +40 the sphere sat directly behind it.
+    this.group.position.set(-40, 5, 0);
     this.group.rotation.x = (Math.PI / 2) + .6;
     scene.add(this.group);
   },
 
   // animate sphere on frame loop
   update(box, mouse, freq) {
-    let xoff = (box.width < 800) ? 0 : 40;
+    // Negative = left. Below 800px the layout stacks into one column and the
+    // track list is no longer beside the visualiser, so it re-centres.
+    let xoff = (box.width < 800) ? 0 : -40;
     let zoff = (box.width < 800) ? -60 : 20;
     let zmod = .5 + (.5 * freq);
 

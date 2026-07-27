@@ -33,6 +33,21 @@ export default {
   segments: 64,            // points per ring
   gapChance: 0.35,         // fraction of a ring left dark, so it reads as segments
 
+  // curve — the tunnel snakes rather than running dead straight.
+  //
+  // The offset is a pure function of world Z, so the rings and the road agree on
+  // the shape without having to share state: each ring reads the curve at its own
+  // z as it travels, and the road (whose geometry is fixed in z) reads it per row.
+  //
+  // The frequencies are whole cycles per tunnel depth on purpose. Rings recycle by
+  // subtracting exactly one depth, so anything else would make the curve jump at
+  // the moment a ring wraps.
+  curveAmpX: 11,
+  curveAmpY: 7,
+  curveFreqX: 1,           // whole cycles over one tunnel length
+  curveFreqY: 2,
+  curveDrift: 0.12,        // radians/sec, so the bends evolve instead of sitting still
+
   // motion
   baseSpeed: 26,           // units/sec while playing, before audio adds to it
   audioSpeed: 90,          // extra units/sec at full frequency
@@ -68,6 +83,11 @@ export default {
   _roadHead: 0,
   _roadAccum: 0,
   _roadSpectrum: null,     // smoothed spectrum, so rows do not jitter
+  // Animation time that only advances while playing. THREE.Clock keeps running
+  // when paused, so driving the curve, hue drift or wave phase from it left the
+  // tunnel slowly bending and shifting colour on a stopped player.
+  _animTime: 0,
+  _elapsed: 0,             // shared with _renderRoad so the road curves in step
   _roadLut: null,          // amplitude -> rgb lookup, see _renderRoad()
   roadLutSteps: 48,
 
@@ -149,6 +169,15 @@ export default {
     line.userData.radius = radius;
     line.userData.hue = t * this.hueSpan;
     return line;
+  },
+
+  // lateral offset of the tunnel centre at a given depth
+  _curveAt(z, elapsed) {
+    const k = (Math.PI * 2) / (this.ringCount * this.ringSpacing);
+    return {
+      x: this.curveAmpX * Math.sin(k * this.curveFreqX * z + elapsed * this.curveDrift),
+      y: this.curveAmpY * Math.cos(k * this.curveFreqY * z + elapsed * this.curveDrift * 0.7),
+    };
   },
 
   /**
@@ -255,14 +284,23 @@ export default {
     const lut = this._roadLut;
     const maxStep = this.roadLutSteps - 1;
 
+    const depth = this.ringCount * this.ringSpacing;
+
     for (let r = 0; r < rows; r++) {
       // row 0 of the mesh is the far end; walk back through history from the head
       const h = (this._roadHead - r + rows * 2) % rows;
+
+      // The road's geometry is fixed in z, so the curve is sampled per row and
+      // applied to the vertices. Computed once per row, not per vertex.
+      const z = -depth + 20 + (r / (rows - 1)) * depth;
+      const bend = this._curveAt(z, this._elapsed);
+
       for (let i = 0; i < cols; i++) {
         const v = this._roadHistory[h * cols + i];
         const idx = r * cols + i;
 
-        pos.setY(idx, -this.roadDrop + v * this.roadHeight);
+        pos.setX(idx, ((i / (cols - 1)) - 0.5) * this.roadWidth + bend.x);
+        pos.setY(idx, -this.roadDrop + bend.y + v * this.roadHeight);
 
         // Same neon band as the rings, brightness by amplitude.
         const k = Math.min(maxStep, Math.max(0, Math.round(v * maxStep))) * 3;
@@ -285,12 +323,14 @@ export default {
     if (!this.group || !this.clock) return;
 
     const dt = Math.min(this.clock.getDelta(), 0.1); // clamp after a tab switch
-    const elapsed = this.clock.getElapsedTime();
 
     // Nothing plays, nothing moves. getFreqData() decays its fallback counter
     // toward zero when paused, but that still crept the tunnel forward, so the
     // level is forced to zero rather than trusted.
     const level = playing ? Math.max(0, Math.min(1, freq || 0)) : 0;
+
+    if (playing) this._animTime += dt;
+    const elapsed = this._animTime;
 
     // Transient detection: compare the level against its own running average and
     // convert the overshoot into a kick that decays fast. This is what makes the
@@ -311,6 +351,11 @@ export default {
         ring.position.z -= depth;
         ring.rotation.z = Math.random() * Math.PI * 2;
       }
+
+      // Follow the curve at this ring's depth.
+      const bend = this._curveAt(ring.position.z, elapsed);
+      ring.position.x = bend.x;
+      ring.position.y = bend.y;
 
       // Fade in from the far end so rings do not pop into existence.
       const dist = recycleAt - ring.position.z;
@@ -338,6 +383,7 @@ export default {
         this._pushRoadRow(level);
       }
     }
+    this._elapsed = elapsed;
     this._renderRoad(level);
 
     // Slow roll, plus a gentle lean toward the pointer so it feels alive.
